@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>​</title>
+<style>
+  * {margin: 0; padding: 0; box-sizing: border-box; font-family: 思源宋体;}
+  html, body {height: 100%; overflow: hidden;}
+  body {background-color: #e6f7ff; position: relative; padding-bottom: 40px;}
+
+  .os-topbar {height: 40px; background: #2c3e50; color: white; line-height: 40px; padding: 0 20px; font-size: 16px; display: flex; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 998;}
+  .os-time {font-size: 14px;}
+
+  .desktop {position: fixed; top: 40px; left: 0; right: 0; bottom: 40px; padding: 20px; overflow: auto; z-index: 1;}
+  .desktop-icon {width: 80px; height: 100px; margin: 30px 25px; float: left; text-align: center; cursor: pointer; user-select: none; border-radius: 4px; transition: all 0.2s;}
+  .desktop-icon:hover {background: rgba(255,255,255,0.3);}
+  .desktop-icon img {width: 60px; height: 60px; margin-bottom: 8px; pointer-events: none;}
+  .desktop-icon p {color: #2c3e50; font-weight: 500; font-size: 14px; line-height: 1.4;}
+
+  .os-taskbar {height: 40px; background: #2c3e50; position: fixed; bottom: 0; left: 0; right: 0; z-index: 999; display: flex; align-items: center; padding: 0 10px;}
+  .taskbar-start {width: 40px; height: 30px; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-right: 20px;}
+  .win-icon {display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 18px; height: 18px;}
+  .win-icon div {background: #3498db; border-radius: 1px;}
+  .taskbar-apps {flex: 1; display: flex; align-items: center; gap: 10px;}
+  .taskbar-app {width: 30px; height: 30px; border-radius: 4px; background: #4a6fa5; color: white; line-height: 30px; text-align: center; cursor: pointer; display: none;}
+  .taskbar-tray {width: 100px; text-align: right; color: white; font-size: 14px;}
+
+  /* 开始菜单：左下角弹出 */
+  .start-menu {position: fixed; bottom: 40px; left: 10px; width: 280px; background: #fff; border-radius: 0 8px 8px 8px; box-shadow: 0 0 15px rgba(0,0,0,0.2); z-index: 996; display: none; padding: 15px;}
+  .start-menu-title {font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;}
+  .start-menu-recent {margin-bottom: 15px;}
+  .start-menu-recent p {font-size: 14px; color: #666; margin-bottom: 8px;}
+  .start-menu-app {padding: 8px 10px; border-radius: 4px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;}
+  .start-menu-app:hover {background: #f5f5f5;}
+  .start-menu-app i {font-size: 18px; color: #3498db;}
+  .start-menu-app span {font-size: 14px; color: #2c3e50;}
+  .start-menu-divider {height: 1px; background: #e0e0e0; margin: 10px 0;}
+  .start-menu-system {display: flex; flex-direction: column; gap: 6px;}
+  .start-menu-system-btn {padding: 10px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; transition: all 0.2s; text-align: left;}
+  .btn-shutdown {background: #e74c3c; color: #fff;}
+  .btn-shutdown:hover {background: #c0392b;}
+  .btn-restart {background: #f39c12; color: #fff;}
+  .btn-restart:hover {background: #d35400;}
+  .btn-exit {background: #3498db; color: #fff;}
+  .btn-exit:hover {background: #2980b9;}
+
+  .app-window {width: 90%; max-width: 450px; min-height: 380px; background: white; border: 3px solid #3498db; border-radius: 8px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.2); z-index: 99;
+    transition: all 50ms ease-out;
+  }
+  .app-window.fullscreen {width: 100% !important; height: 100% !important; max-width: none !important; min-height: none !important; top: 0 !important; left: 0 !important; transform: none !important; border-radius: 0 !important; border: none !important; z-index: 995 !important;}
+  .app-title {height: 35px; background: #3498db; color: white; line-height: 35px; padding: 0 15px; display: flex; justify-content: space-between; cursor: move;}
+  .app-title-btns {display: flex; align-items: center; gap: 15px;}
+  .app-fullscreen {cursor: pointer; font-size: 18px; line-height: 35px; width: 20px; text-align: center;}
+  .app-close {cursor: pointer; font-size: 20px; line-height: 35px; width: 30px; text-align: center;}
+  .app-content {flex: 1; padding: 20px; overflow: auto;}
+
+  input {padding: 10px; width: 100%; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 5px; margin: 10px 0; outline: none;}
+  textarea {width: 100%; padding: 10px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 5px; outline: none; resize: none;}
+  button {padding: 10px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; margin: 5px 0; transition: all 0.2s;}
+  .btn-full {width: 100%;}
+  .btn-half {width: 48%; float: left; margin: 5px 1%;}
+  .btn-wechat {background: #1aad19; color: white;}
+  .btn-wechat:hover {background: #179b16;}
+  .btn-default {background: #3498db; color: white;}
+  .btn-default:hover {background: #2980b9;}
+  .btn-danger {background: #e74c3c; color: white;}
+  .btn-danger:hover {background: #c0392b;}
+  .calc-btn {width: 23%; margin: 2px; background: #3498db; color: white;}
+  .calc-btn:hover {background: #2980b9;}
+  h3 {color: #2c3e50; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0; user-select: none; font-size: 18px;}
+  p {line-height: 1.8; color: #666; margin: 5px 0;}
+  .clearfix::after {content: ""; display: block; clear: both;}
+
+  .setting-card {background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 25px; border: 1px solid #e0e0e0;}
+  .user-avatar-box {display: flex; align-items: center; gap: 20px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0;}
+  .user-avatar {width: 80px; height: 80px; border-radius: 50%; border: 3px solid #e0e0e0; object-fit: cover; background: #e0e0e0;}
+  .user-info {flex: 1;}
+  .user-name {font-size: 20px; font-weight: bold; color: #2c3e50; margin-bottom: 8px;}
+  .user-desc {font-size: 14px; color: #666;}
+  .setting-group {margin-bottom: 20px;}
+  .setting-group-title {font-size: 16px; font-weight: 500; color: #3498db; margin-bottom: 12px;}
+  .setting-btn {width: 100%; padding: 12px; font-size: 16px;}
+
+  #paintCanvas {border: 2px solid #e0e0e0; border-radius: 5px; background: white; width: 100%; height: 220px; cursor: crosshair;}
+  .clock-box {text-align: center; padding: 20px 0;}
+  .clock-time {font-size: 48px; font-weight: bold; color: #2c3e50; margin-bottom: 10px;}
+  .clock-date {font-size: 18px; color: #666;}
+  .note-item {background: #fffbe8; border-radius: 5px; padding: 10px; margin-bottom: 10px; border-left: 4px solid #f1c40f;}
+  .note-item p {margin: 0; color: #2c3e50; word-break: break-all;}
+  .note-item button {width: auto; padding: 5px 10px; font-size: 12px; margin: 5px 0 0 0;}
+</style>
+
+<body>
+  <div class="os-topbar">
+    <div>📟 Remember OS - 专属桌面系统 V2.8</div>
+    <div class="os-time" id="sysTime"></div>
+  </div>
+
+  <div class="desktop">
+    <div class="desktop-icon" ondblclick="openApp('textApp')">
+      <img src="https://img.icons8.com/fluency/96/3498db/edit-file.png" alt="文本工具">
+      <p>文本工具</p>
+    </div>
+    <div class="desktop-icon" ondblclick="openApp('infoApp')">
+      <img src="https://img.icons8.com/fluency/96/3498db/info.png" alt="系统信息">
+      <p>系统信息</p>
+    </div>
+    <div class="desktop-icon" ondblclick="openApp('calcApp')">
+      <img src="https://img.icons8.com/fluency/96/3498db/calculator.png" alt="简易计算器">
+      <p>计算器</p>
+    </div>
+    <div class="desktop-icon" ondblclick="openApp('settingApp')">
+      <img src="https://img.icons8.com/fluency/96/3498db/settings.png" alt="设置">
+      <p>设置</p>
+    </div>
+    <div class="desktop-icon" ondblclick="openApp('noteApp')">
+      <img src="https://img.icons8.com/fluency/96/3498db/book.png" alt="记事本">
+      <p>记事本</p>
+    </div>
+    <div class="desktop-icon" ondblclick="openApp('paintApp')">
+      <img src="https://img.icons8.com/fluency/96/3498db/paint.png" alt="简易画板">
+      <p>简易画板</p>
+    </div>
+    <div class="desktop-icon" ondblclick="openApp('clockApp')">
+      <img src="https://img.icons8.com/fluency/96/3498db/clock.png" alt="全屏时钟">
+      <p>全屏时钟</p>
+    </div>
+    <div class="desktop-icon" ondblclick="openApp('stickyApp')">
+      <img src="https://img.icons8.com/fluency/96/3498db/sticky-notes.png" alt="桌面便签">
+      <p>桌面便签</p>
+    </div>
+  </div>
+
+  <div class="os-taskbar">
+    <div class="taskbar-start" onclick="toggleStartMenu()">
+      <div class="win-icon">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+    </div>
+    <div class="taskbar-apps">
+      <div class="taskbar-app" id="task-text" onclick="toggleApp('textApp')">📝</div>
+      <div class="taskbar-app" id="task-info" onclick="toggleApp('infoApp')">📜</div>
+      <div class="taskbar-app" id="task-calc" onclick="toggleApp('calcApp')">🧮</div>
+      <div class="taskbar-app" id="task-setting" onclick="toggleApp('settingApp')">🔧</div>
+      <div class="taskbar-app" id="task-note" onclick="toggleApp('noteApp')">📒</div>
+      <div class="taskbar-app" id="task-paint" onclick="toggleApp('paintApp')">🎨</div>
+      <div class="taskbar-app" id="task-clock" onclick="toggleApp('clockApp')">🕐</div>
+      <div class="taskbar-app" id="task-sticky" onclick="toggleApp('stickyApp')">📌</div>
+    </div>
+    <div class="taskbar-tray" id="trayTime"></div>
+  </div>
+
+  <!-- 开始菜单 -->
+  <div class="start-menu" id="startMenu">
+    <div class="start-menu-title">开始菜单</div>
+    <div class="start-menu-recent">
+      <p>最近使用的应用</p>
+      <div id="recentAppsList">
+        <div class="start-menu-app" style="color:#999; cursor:default; background:none;">暂无使用记录</div>
+      </div>
+    </div>
+    <div class="start-menu-divider"></div>
+    <div class="start-menu-system">
+      <button class="start-menu-system-btn btn-shutdown" onclick="systemShutdown()">关机</button>
+      <button class="start-menu-system-btn btn-restart" onclick="systemRestart()">重启系统</button>
+      <button class="start-menu-system-btn btn-exit" onclick="systemExit()">退出程序</button
+      <style>
+<button onclick="open('main.class')">安全模式</button>
+    </div>
+  </div>
+
+  <!-- 软件窗口不变 -->
+  <div class="app-window" id="textApp">
+    <div class="app-title" onmousedown="startDrag(event, 'textApp')">
+      <div>文本工具 - Remember OS</div>
+      <div class="app-title-btns">
+        <div class="app-fullscreen" onclick="toggleFullscreen('textApp')">⛶</div>
+        <div class="app-close" onclick="closeApp('textApp')">×</div>
+      </div>
+    </div>
+    <div class="app-content clearfix">
+      <h3>输入文本（输入法确认/回车即可显示）</h3>
+      <input type="text" id="osInput" placeholder="请输入文本..." onkeydown="if(event.keyCode===13) showMyText()">
+      <button class="btn-default btn-half" onclick="showMyText()">📤 显示内容</button>
+      <button class="btn-default btn-half" onclick="clearInput()">🗑 清空文本</button>
+    </div>
+  </div>
+
+  <div class="app-window" id="infoApp">
+    <div class="app-title" onmousedown="startDrag(event, 'infoApp')">
+      <div>系统信息 - Remember OS</div>
+      <div class="app-title-btns">
+        <div class="app-fullscreen" onclick="toggleFullscreen('infoApp')">⛶</div>
+        <div class="app-close" onclick="closeApp('infoApp')">×</div>
+      </div>
+    </div>
+    <div class="app-content">
+      <h3>📜 系统基本信息</h3>
+      <p>系统名称：Remember OS</p>
+      <p>版本号：V2.8 左下角开始菜单</p>
+      <p>开发语言：HTML+JavaScript</p>
+      <p>适配设备：鸿蒙/安卓平板/手机/电脑</p>
+      <p>内置软件：8款</p>
+      <p>核心特性：左下角开始菜单 + 最近使用 + 关机 + 50ms全屏动画</p>
+    </div>
+  </div>
+
+  <div class="app-window" id="calcApp">
+    <div class="app-title" onmousedown="startDrag(event, 'calcApp')">
+      <div>简易计算器 - Remember OS</div>
+      <div class="app-title-btns">
+        <div class="app-fullscreen" onclick="toggleFullscreen('calcApp')">⛶</div>
+        <div class="app-close" onclick="closeApp('calcApp')">×</div>
+      </div>
+    </div>
+    <div class="app-content">
+      <h3>简易计算</h3>
+      <input type="text" id="calcInput" placeholder="计算结果会显示在这里" readonly>
+      <button class="calc-btn" onclick="addCalc('1')">1</button>
+      <button class="calc-btn" onclick="addCalc('2')">2</button>
+      <button class="calc-btn" onclick="addCalc('3')">3</button>
+      <button class="calc-btn" onclick="addCalc('+')">+</button>
+      <button class="calc-btn" onclick="addCalc('4')">4</button>
+      <button class="calc-btn" onclick="addCalc('5')">5</button>
+      <button class="calc-btn" onclick="addCalc('6')">6</button>
+      <button class="calc-btn" onclick="addCalc('-')">-</button>
+      <button class="calc-btn" onclick="addCalc('7')">7</button>
+      <button class="calc-btn" onclick="addCalc('8')">8</button>
+      <button class="calc-btn" onclick="addCalc('9')">9</button>
+      <button class="calc-btn" onclick="addCalc('*')">×</button>
+      <button class="calc-btn" onclick="addCalc('0')">0</button>
+      <button class="calc-btn" onclick="addCalc('.')">.</button>
+      <button class="calc-btn" onclick="calcResult()">=</button>
+      <button class="calc-btn" onclick="clearCalc()">C</button>
+    </div>
+  </div>
+
+  <div class="app-window" id="settingApp">
+    <div class="app-title" onmousedown="startDrag(event, 'settingApp')">
+      <div>系统设置 - Remember OS</div>
+      <div class="app-title-btns">
+        <div class="app-fullscreen" onclick="toggleFullscreen('settingApp')">⛶</div>
+        <div class="app-close" onclick="closeApp('settingApp')">×</div>
+      </div>
+    </div>
+    <div class="app-content">
+      <div class="setting-card">
+        <h3>🔧 账户设置</h3>
+        <div class="user-avatar-box">
+          <img src="https://img.icons8.com/fluency/96/000000/user-male-circle.png" alt="用户头像" class="user-avatar" id="userAvatar">
+          <div class="user-info">
+            <div class="user-name" id="userName">登录/注册</div>
+            <div class="user-desc" id="userDesc">未登录账户</div>
+          </div>
+        </div>
+        <button class="btn-wechat setting-btn" onclick="wechatLogin()">📱 微信授权登录</button>
+      </div>
+      <div class="setting-group">
+        <div class="setting-group-title">🎨 桌面设置</div>
+        <button class="btn-default setting-btn" onclick="changeBg()">切换系统背景色</button>
+        <button class="btn-default setting-btn" onclick="resetAllWin()">重置所有窗口位置</button>
+      </div>
+      <div class="setting-group">
+        <div class="setting-group-title">🖥 系统操作</div>
+        <button class="btn-default setting-btn" onclick="restartOS()">重启Remember OS</button>
+        <button class="btn-danger setting-btn" onclick="logoutOS()">退出账户登录</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-window" id="noteApp">
+    <div class="app-title" onmousedown="startDrag(event, 'noteApp')">
+      <div>记事本 - Remember OS</div>
+      <div class="app-title-btns">
+        <div class="app-fullscreen" onclick="toggleFullscreen('noteApp')">⛶</div>
+        <div class="app-close" onclick="closeApp('noteApp')">×</div>
+      </div>
+    </div>
+    <div class="app-content">
+      <h3>📒 我的记事本</h3>
+      <textarea id="noteContent" rows="10" placeholder="在这里记录你的内容..."></textarea>
+      <button class="btn-default btn-half" onclick="saveNote()">💾 保存笔记</button>
+      <button class="btn-default btn-half" onclick="clearNote()">🗑 清空内容</button>
+    </div>
+  </div>
+
+  <div class="app-window" id="paintApp">
+    <div class="app-title" onmousedown="startDrag(event, 'paintApp')">
+      <div>简易画板 - Remember OS</div>
+      <div class="app-title-btns">
+        <div class="app-fullscreen" onclick="toggleFullscreen('paintApp')">⛶</div>
+        <div class="app-close" onclick="closeApp('paintApp')">×</div>
+      </div>
+    </div>
+    <div class="app-content">
+      <h3>🎨 简易涂鸦画板</h3>
+      <canvas id="paintCanvas"></canvas>
+      <div class="clearfix">
+        <button class="btn-default btn-half" onclick="clearPaint()">🗑 清空画布</button>
+        <input type="color" id="paintColor" value="#3498db" style="width: 48%; height: 40px; margin: 5px 1%;">
+      </div>
+    </div>
+  </div>
+
+  <div class="app-window" id="clockApp">
+    <div class="app-title" onmousedown="startDrag(event, 'clockApp')">
+      <div>全屏时钟 - Remember OS</div>
+      <div class="app-title-btns">
+        <div class="app-fullscreen" onclick="toggleFullscreen('clockApp')">⛶</div>
+        <div class="app-close" onclick="closeApp('clockApp')">×</div>
+      </div>
+    </div>
+    <div class="app-content">
+      <h3>🕐 实时时钟</h3>
+      <div class="clock-box">
+        <div class="clock-time" id="bigTime">00:00:00</div>
+        <div class="clock-date" id="bigDate">2026-01-01 星期X</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-window" id="stickyApp">
+    <div class="app-title" onmousedown="startDrag(event, 'stickyApp')">
+      <div>桌面便签 - Remember OS</div>
+      <div class="app-title-btns">
+        <div class="app-fullscreen" onclick="toggleFullscreen('stickyApp')">⛶</div>
+        <div class="app-close" onclick="closeApp('stickyApp')">×</div>
+      </div>
+    </div>
+    <div class="app-content">
+      <h3>📌 桌面便签</h3>
+      <input type="text" id="stickyInput" placeholder="输入便签内容，回车添加..." onkeydown="if(event.keyCode===13) addSticky()">
+      <button class="btn-default btn-full" onclick="addSticky()">➕ 添加新便签</button>
+      <div id="stickyList" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+
+  <script>
+    let recentApps = [];
+    const appMap = {
+      textApp: {name: '文本工具', icon: '📝'},
+      infoApp: {name: '系统信息', icon: '📜'},
+      calcApp: {name: '计算器', icon: '🧮'},
+      settingApp: {name: '系统设置', icon: '⚙️<'},
+      noteApp: {name: '记事本', icon: '📒'},
+      paintApp: {name: '简易画板', icon: '🎨'},
+      clockApp: {name: '全屏时钟', icon: '🕐'},
+      stickyApp: {name: '桌面便签', icon: '📌'}
+    };
+
+    // 时钟
+    setInterval(() => {
+      let now = new Date();
+      let h = now.getHours().toString().padStart(2, '0');
+      let m = now.getMinutes().toString().padStart(2, '0');
+      let s = now.getSeconds().toString().padStart(2, '0');
+      let date = now.toLocaleDateString();
+      let week = ['日','一','二','三','四','五','六'][now.getDay()];
+      document.getElementById('sysTime').innerText = `${h}:${m}:${s}`;
+      document.getElementById('trayTime').innerText = `${h}:${m}`;
+      document.getElementById('bigTime').innerText = `${h}:${m}:${s}`;
+      document.getElementById('bigDate').innerText = `${date} 周${week}`;
+    }, 1000);
+
+    // 开始菜单：左下角弹出
+    function toggleStartMenu() {
+      const menu = document.getElementById('startMenu');
+      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+      document.addEventListener('click', function closeMenu(e) {
+        if (!menu.contains(e.target) && !e.target.closest('.taskbar-start')) {
+          menu.style.display = 'none';
+          document.removeEventListener('click', closeMenu);
+        }
+      });
+    }
+
+    function updateRecentApps(appId) {
+      recentApps = recentApps.filter(id => id !== appId);
+      recentApps.unshift(appId);
+      if (recentApps.length > 6) recentApps.pop();
+      renderRecentApps();
+    }
+
+    function renderRecentApps() {
+      const list = document.getElementById('recentAppsList');
+      if (recentApps.length === 0) {
+        list.innerHTML = '<div class="start-menu-app" style="color:#999;">暂无使用记录</div>';
+        return;
+      }
+      list.innerHTML = '';
+      recentApps.forEach(appId => {
+        const app = appMap[appId];
+        const item = document.createElement('div');
+        item.className = 'start-menu-app';
+        item.innerHTML = `<i>${app.icon}</i><span>${app.name}</span>`;
+        item.onclick = () => {
+          openApp(appId);
+          document.getElementById('startMenu').style.display = 'none';
+        };
+        list.appendChild(item);
+      });
+    }
+
+    function systemShutdown() {
+      if (confirm('确定要关机吗？')) {
+        alert('系统正在关机...');
+        closeAllApps();
+        document.body.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;">系统已关机</div>';
+      }
+    }
+
+    function systemRestart() {
+      if (confirm('确定要重启系统吗？')) {
+        alert('系统正在重启...');
+        closeAllApps();
+        recentApps = [];
+        renderRecentApps();
+        document.getElementById('startMenu').style.display = 'none';
+        alert('重启成功！');
+      }
+    }
+
+    function systemExit() {
+      if (confirm('确定要退出程序吗？')) {
+        window.close();
+      }
+    }
+
+    function closeAllApps() {
+      const allApps = document.getElementsByClassName('app-window');
+      const allTask = document.getElementsByClassName('taskbar-app');
+      for (let i = 0; i < allApps.length; i++) {
+        allApps[i].style.display = 'none';
+        allTask[i].style.display = 'none';
+        allApps[i].classList.remove('fullscreen');
+      }
+    }
+
+    function toggleFullscreen(appId) {
+      const win = document.getElementById(appId);
+      win.classList.toggle('fullscreen');
+      win.querySelector('.app-title').onmousedown = win.classList.contains('fullscreen') 
+        ? null 
+        : (e) => startDrag(e, appId);
+    }
+
+    function openApp(appId) {
+      const win = document.getElementById(appId);
+      if (win.style.display !== 'flex') {
+        win.style.display = 'flex';
+        document.getElementById(`task-${appId.replace('App', '')}`).style.display = 'flex';
+        updateRecentApps(appId);
+        if (appId === 'paintApp') initPaint();
+        if (appId === 'noteApp') document.getElementById('noteContent').value = localStorage.getItem('rememberOS_note') || '';
+      }
+    }
+
+    function closeApp(appId) {
+      const win = document.getElementById(appId);
+      win.style.display = 'none';
+      document.getElementById(`task-${appId.replace('App', '')}`).style.display = 'none';
+      if (win.classList.contains('fullscreen')) win.classList.remove('fullscreen');
+    }
+
+    function toggleApp(appId) {
+      const win = document.getElementById(appId);
+      win.style.display === 'flex' ? closeApp(appId) : openApp(appId);
+    }
+
+    let dragX, dragY, winX, winY;
+    function startDrag(e, appId) {
+      const win = document.getElementById(appId);
+      dragX = e.clientX;
+      dragY = e.clientY;
+      winX = win.offsetLeft;
+      winY = win.offsetTop;
+      document.onmousemove = (ev) => dragWin(ev, win);
+      document.onmouseup = () => document.onmousemove = null;
+    }
+    function dragWin(e, win) {
+      const dx = e.clientX - dragX;
+      const dy = e.clientY - dragY;
+      win.style.left = `${winX + dx}px`;
+      win.style.top = `${winY + dy}px`;
+      win.style.transform = 'none';
+    }
+
+    function showMyText() {
+      const v = document.getElementById("osInput").value.trim();
+      v ? alert(`你输入：${v}`) : alert("请输入文本");
+    }
+    function clearInput() { document.getElementById("osInput").value = ""; }
+
+    function addCalc(v) { document.getElementById('calcInput').value += v; }
+    function calcResult() {
+      try {
+        let r = eval(document.getElementById('calcInput').value.replace('×','*'));
+        document.getElementById('calcInput').value = isFinite(r) ? r : '错误';
+      } catch(e) { alert("计算错误"); }
+    }
+    function clearCalc() { document.getElementById('calcInput').value = ""; }
+
+    function wechatLogin() {
+      alert("微信登录成功！");
+      document.getElementById('userName').innerText = "微信用户";
+      document.getElementById('userDesc').innerText = "已登录";
+    }
+    function logoutOS() {
+      alert("已退出登录");
+      document.getElementById('userName').innerText = "登录/注册";
+      document.getElementById('userDesc').innerText = "未登录账户";
+    }
+
+    function restartOS() {
+      alert("系统重启成功");
+      closeAllApps();
+    }
+    function changeBg() {
+      const cs = ['#e6f7ff','#f0f9ff','#f5faff','#e8f4f8','#f2f9f8','#f8f9fa'];
+      document.body.style.backgroundColor = cs[Math.floor(Math.random()*cs.length)];
+    }
+    function resetAllWin() {
+      const all = document.getElementsByClassName('app-window');
+      for(let w of all) {
+        w.style.left='50%'; w.style.top='50%'; w.style.transform='translate(-50%,-50%)';
+        w.classList.remove('fullscreen');
+      }
+    }
+
+    function saveNote() {
+      localStorage.setItem('rememberOS_note', document.getElementById('noteContent').value);
+      alert("保存成功");
+    }
+    function clearNote() {
+      document.getElementById('noteContent').value = "";
+      localStorage.removeItem('rememberOS_note');
+    }
+
+    let canvas, ctx, isDrawing = false;
+    function initPaint() {
+      canvas = document.getElementById('paintCanvas');
+      ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = document.getElementById('paintColor').value;
+      document.getElementById('paintColor').onchange = function(){ctx.strokeStyle=this.value;};
+      canvas.onmousedown = startDraw;
+      canvas.onmousemove = draw;
+      canvas.onmouseup = stopDraw;
+      canvas.onmouseleave = stopDraw;
+      canvas.ontouchstart = e=>{e.preventDefault(); startDraw(e.touches[0]);};
+      canvas.ontouchmove = e=>{e.preventDefault(); draw(e.touches[0]);};
+      canvas.ontouchend = stopDraw;
+    }
+    function startDraw(e){
+      isDrawing=1;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX || e.clientX-canvas.getBoundingClientRect().left, e.offsetY || e.clientY-canvas.getBoundingClientRect().top);
+    }
+    function draw(e){if(!isDrawing)return;ctx.lineTo(e.offsetX || e.clientX-canvas.getBoundingClientRect().left,e.offsetY || e.clientY-canvas.getBoundingClientRect().top);ctx.stroke();}
+    function stopDraw(){isDrawing=0;}
+    function clearPaint(){ctx.clearRect(0,0,canvas.width,canvas.height);}
+
+    function addSticky(){
+      const c = document.getElementById('stickyInput').value.trim();
+      if(!c)return;
+      const div = document.createElement('div');
+      div.className='note-item';
+      div.innerHTML=`<p>${c}</p><button class="btn-danger" onclick="this.parentElement.remove()">删除</button>`;
+      document.getElementById('stickyList').appendChild(div);
+      document.getElementById('stickyInput').value='';
+    }
+
+    renderRecentApps();
+  </script>
+</body>

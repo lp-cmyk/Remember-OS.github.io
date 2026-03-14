@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>̅</title>
+
+<body style="margin:0;background:#000;color:#fff;text-align:center;padding-top:35vh;">
+
+<!-- 2×2 四个蓝色方块（超紧凑，不松散） -->
+<div style="font-size:50px;color:#0078d7;line-height:1.0;">
+■■<br>■●
+</div>
+
+<br style="margin:1;">
+
+<!-- 转圈加载 -->
+<div id="loader" style="font-size:26px;margin-top:12px;">○</div>
+
+<div style="font-size:18px;margin-top:8px;">正在启动系统...</div>
+
+<script>
+let circle = ["○","◎","●","◎","○"];
+let i=0;
+setInterval(()=>{
+  document.getElementById("loader").innerText = circle[i];
+  i=(i+1)%5;
+},120);
+
+setTimeout(()=>{
+  location.href="g.html";
+},3000);
+</script>
+
+</body>
+</html>
